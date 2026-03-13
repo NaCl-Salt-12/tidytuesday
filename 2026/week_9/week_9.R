@@ -30,6 +30,8 @@ sex_ratio <- body_condition |>
 historical_pop <- read_csv("./Historical_population_sizes.csv")  |>
   rename(population = Population, population_size = Population_Size, year = Year, sex = Sex) |> 
   mutate(population = case_when(population == "Konjsko" ~ "Konjsko", population == "Beach" ~ "Golem Grad", population == "Plateau" ~ "Golem Grad")) |>
+  group_by(year, population,sex) |> 
+  summarise(population_size = sum(population_size), .groups = "drop") |>
   unite(
     col = "sex_region",
     sex,
@@ -41,6 +43,8 @@ historical_pop <- read_csv("./Historical_population_sizes.csv")  |>
 projected_pop <- read_csv("Projected_median_population_sizes.csv") |>
   rename(population = Population, population_size = Population_Size, year = Year, sex = Sex) |> 
   mutate(population = case_when(population == "Konjsko" ~ "Konjsko", population == "Beach" ~ "Golem Grad", population == "Plateau" ~ "Golem Grad")) |>
+  group_by(year, population,sex) |> 
+  summarise(population_size = sum(population_size), .groups = "drop") |>
   unite(
     col = "sex_region",
     sex,
@@ -66,7 +70,7 @@ showtext_auto()
 
 
 body_con <- body_condition |> 
-  mutate(locality = case_when(population == "Konjsko" ~ "Konjsko", population == "Beach" ~ "Golem Grad", population == "Plateau" ~ "Golem Grad")) |>
+  mutate(locality = case_when(locality == "Konjsko" ~ "Konjsko", locality  == "Beach" ~ "Golem Grad", locality == "Plateau" ~ "Golem Grad")) |>
   mutate(locality = factor(locality, levels = c("Konjsko", "Golem Grad")),
           sex = factor(case_when(sex == "m" ~ "Male", sex == "f" ~ "Female", TRUE ~ "Unknown"), levels = c("Male","Female"))) |> 
   unite(
@@ -222,3 +226,15 @@ f1
   # theme(plot.background = element_rect(fill = "antiquewhite", color = NA))
 #
 # paint_pomological(f1, res = 110)
+#
+#
+#
+#
+# Lesson learned simplify data ask why is this being shown what story am I trying to tell and keep the plot simple 
+# I was initially seperationg Plateau and Bearch but they are both part of Golem Grad 
+# so what I should have done which I started is combined the two. to directly compare golem grad and konjsko.
+# the comparison between plateau and beach was not releveant to the story I wanted to tell though important to the paper
+# the faceting with the highlighted lines whas more confusing than helpful
+# so what I needed to do is remove the faceting and condense to two graphs and maybe added additional ones to tell the story better
+# so think about the story and then identify the key/simplest way to tell that story.
+#
