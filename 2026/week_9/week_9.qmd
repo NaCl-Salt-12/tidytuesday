@@ -1,0 +1,37 @@
+---
+title: "Tidytuesday: Week 9"
+subtitle: "2026-03-03"
+format:
+  html:
+---
+
+```{r}
+#| label: Setup
+
+library(tidyverse)
+library(tidytuesdayR)
+
+tuesdata <- tidytuesdayR::tt_load(2026,week = 9 )
+
+clutch_size <- tuesdata$clutch_size_cleaned
+
+tortoise_body_condition <- tuesdata$tortoise_body_condition_cleaned
+
+df <- tortoise_body_condition |>
+  inner_join(clutch_size, by = "individual") |>
+  group_by(year) |> 
+  summarise(avg_age = mean(age, na.rm = TRUE), .groups = "drop")
+
+avg_body_mass <- tortoise_body_condition |> 
+  group_by(year) |>
+  summarise(avg_body_mass = mean(body_mass_grams, na.rm = TRUE), .groups = "drop")
+
+
+ggplot(avg_body_mass, aes(x = year, y = avg_body_mass)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Average Body Mass of Tortoises Over Time",
+       x = "Year",
+       y = "Average Body Mass (grams)") +
+  theme_minimal()
+```
