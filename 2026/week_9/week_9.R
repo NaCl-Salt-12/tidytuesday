@@ -15,51 +15,9 @@ clutch_size <- tuesdata$clutch_size_cleaned
 
 body_condition <- tuesdata$tortoise_body_condition_cleaned #|> 
   # filter(!locality == "Konjsko")
-
-df <- clutch_size |>
-  mutate(individual = str_replace(individual, " ", "_")) |>
-  inner_join(body_condition, by = "individual") |>
-  group_by(year) |> 
-  summarise(avg_age = mean(age, na.rm = TRUE), .groups = "drop")
-
-
 n_distinct(clutch_size$individual)
 n_distinct(body_condition$individual)
 glimpse(body_condition)
-
-avg_body_mass <- body_condition |> 
-  group_by(year, locality) |>
-  summarise(avg_body_mass = mean(body_mass_grams, na.rm = TRUE), .groups = "drop")
-
-
-ggplot(avg_body_mass, aes(x = year, y = avg_body_mass,color = locality)) +
-  geom_line() +
-  geom_point() +
-  labs(title = "Average Body Mass of Tortoises Over Time",
-       x = "Year",
-       y = "Average Body Mass (grams)") +
-  theme_minimal()
-
-sex_body_condition <- body_condition |> 
-  mutate(sex = case_when(sex == "m" ~ "Male", sex == "f" ~ "Female", TRUE ~ "Unknown")) |>
-  unite(
-    col = "local_gender",
-    sex,
-    locality,
-    sep = "_",
-    remove = FALSE
-  ) |> 
-  group_by(year,local_gender,sex) |> 
-  summarise(avg_body_mass_grams = mean(body_mass_grams, na.rm = TRUE), .groups = "drop")
-glimpse(sex_body_condition)
-
-ggplot(sex_body_condition, aes(x = year, y = avg_body_mass_grams, color = sex, group = local_gender)) +
-  geom_point() +
-  geom_line() +
-  labs(title = "Body Mass vs Age of Tortoises",
-       x = "Age (years)",
-       y = "Body Mass (grams)") +
-  theme_minimal()
 
 sex_ratio <- body_condition |> 
   group_by(year,sex,locality) |> 
@@ -68,36 +26,10 @@ sex_ratio <- body_condition |>
   group_by(year,locality) |> 
   summarise(male_females_ratio= m/f, .groups = "drop")
 
-glimpse(female_male_ratio)
-
-ggplot(sex_ratio, aes(x = year, y = male_females_ratio, color = locality)) +
-  geom_line() +
-  geom_point()+
-  gghighlight(
-    use_direct_label = FALSE, 
-    unhighlighted_params = list(color = alpha("gray85", 1))
-  ) +
-  facet_wrap(~locality)
-
-
-
-
-body_index_region <- body_condition |> 
-  mutate(sex = case_when(sex == "m" ~ "Male", sex == "f" ~ "Female", TRUE ~ "Unknown")) |>
-  unite(
-    col = "gender_region",
-    sex,
-    locality,
-    sep = "_",
-    remove = FALSE
-  ) |> 
-  group_by(gender_region,sex,locality) |> 
-  summarise(avg_body_index = mean(body_condition_index, na.rm = TRUE), .groups = "drop")
-
-glimpse(body_index_region)
 
 historical_pop <- read_csv("./Historical_population_sizes.csv")  |>
   rename(population = Population, population_size = Population_Size, year = Year, sex = Sex) |> 
+  mutate(population = case_when(population == "Konjsko" ~ "Konjsko", population == "Beach" ~ "Golem Grad", population == "Plateau" ~ "Golem Grad")) |>
   unite(
     col = "sex_region",
     sex,
@@ -108,6 +40,7 @@ historical_pop <- read_csv("./Historical_population_sizes.csv")  |>
 
 projected_pop <- read_csv("Projected_median_population_sizes.csv") |>
   rename(population = Population, population_size = Population_Size, year = Year, sex = Sex) |> 
+  mutate(population = case_when(population == "Konjsko" ~ "Konjsko", population == "Beach" ~ "Golem Grad", population == "Plateau" ~ "Golem Grad")) |>
   unite(
     col = "sex_region",
     sex,
@@ -119,14 +52,7 @@ projected_pop <- read_csv("Projected_median_population_sizes.csv") |>
 combinded_pop <- bind_rows(historical_pop, projected_pop) |> 
   filter(year <= 2100) |> 
   filter(population_size <= 1500) |> 
-  mutate(population = factor(population, levels = c("Konjsko", "Beach", "Plateau")))
-
-
-
-
-
-
-
+  mutate(population = factor(population, levels = c("Konjsko", "Golem Grad")))
 
 
 
@@ -140,7 +66,8 @@ showtext_auto()
 
 
 body_con <- body_condition |> 
-  mutate(locality = factor(locality, levels = c("Konjsko", "Beach", "Plateau")),
+  mutate(locality = case_when(population == "Konjsko" ~ "Konjsko", population == "Beach" ~ "Golem Grad", population == "Plateau" ~ "Golem Grad")) |>
+  mutate(locality = factor(locality, levels = c("Konjsko", "Golem Grad")),
           sex = factor(case_when(sex == "m" ~ "Male", sex == "f" ~ "Female", TRUE ~ "Unknown"), levels = c("Male","Female"))) |> 
   unite(
     col = "sex_region",
@@ -152,28 +79,25 @@ body_con <- body_condition |>
 
 box_color <- "gray30"
 
-# Replace "Pop1" and "Pop2" with your actual facet names
-
 text_facets <- data.frame(
-  population = c("Konjsko", "Beach", "Plateau"), 
+  population = c("Konjsko", "Golem Grad"), 
   year = 2080, 
   population_size = 300, 
   label = "Last Female\ndies",
-  label_color = c("grey85", "grey20", "grey20") 
+  label_color = c("grey85", "grey20") 
 )
 
 text_facets <- data.frame(
-  population = c("Konjsko", "Beach", "Plateau"), 
+  population = c("Konjsko", "Golem Grad"), 
   year = 2080, 
   population_size = 300, 
   label = "Last Female\ndies",
-  label_color = c("grey85", "grey20", "grey20"),
-  # Add segment coordinates and specific colors here
+  label_color = c("grey85", "grey20"),
   x_seg = 2083,
   xend_seg = 2083,
   y_seg = 350,
   yend_seg = 15,
-  seg_color = c("grey85","#c03728", "#c03728" ) # Change "blue" to whatever you want for the 3rd facet
+  seg_color = c("grey85","#c03728")
 )
 
 text_facets$population <- factor(
