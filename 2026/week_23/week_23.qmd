@@ -1,0 +1,123 @@
+---
+title: "Week 23"
+format: html
+---
+
+
+```{r}
+library(tidyverse)
+library(priceR)
+library(ggrepel)
+library(glue)
+library(hrbrthemes)
+
+# game_films <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2026/2026-06-09/game_films.csv')
+# local for offline work
+game_films <- read_csv("/home/nathaniel/Downloads/game_films.csv")
+
+
+```
+
+```{r}
+df <- game_films |> 
+    filter(budget_currency != "£") |> 
+    mutate(
+        release_year = year(release_date),
+        avg_budget = rowMeans(pick(budget_high,budget_low)),
+        world_box_office_millions = worldwide_box_office / 1000000,
+        metacritic_favored = ifelse(metacritic >= rotten_tomatoes, "Metacritic favored", "Rotten Tomatoes favored" )
+    ) #|>
+  # filter(rotten_tomatoes > 0 & metacritic > 0)
+
+unique(game_films$budget_currency)
+
+unique(df$release_year)
+
+game_films |> count(budget_currency)
+
+df |> select(title,worldwide_box_office) |> arrange(desc(worldwide_box_office)) |> head(20)
+
+```
+
+```{r}
+# ggplot(df, aes(x = release_year, y = world_box_office_100k))+
+#     geom_point()
+```
+
+
+```{r}
+
+top_box <- df |> slice_max(order_by = world_box_office_millions,n = 2)
+top_meta <- df |> slice_max(order_by = metacritic,n = 1)
+top_rotten <- df |> slice_max(order_by = rotten_tomatoes,n = 1)
+
+bot_box <- df |> slice_min(order_by = world_box_office_millions,n = 2)
+bot_meta <- df |> slice_min(order_by = metacritic,n = 1)
+bot_rotten <- df |> slice_min(order_by = rotten_tomatoes,n = 1)
+
+top_meta_x <- df |> filter(metacritic_favored == "Metacritic favored") |>
+  slice_max(order_by = metacritic,n = 1)
+top_meta_x$title
+
+df$metacritic_favored
+text <- bind_rows(top_box,top_meta,top_rotten,bot_box,bot_meta,top_meta_x) |>
+  distinct()|>
+  mutate(text = glue('{title}\n${scales::comma(round(world_box_office_millions,2))} M\n{release_year}'))
+
+
+text$text |> head()
+
+nrow(text)
+```
+
+
+```{r}
+#| fig-width: 7
+#| fig-height: 7
+
+ggplot(df, aes(x = metacritic, y= rotten_tomatoes, color = metacritic_favored))+
+
+  geom_abline(slope = 1, intercept = 0, color = "#66c0f4", linetype = 2)+
+  geom_point(data = text, color = "black", aes(size = world_box_office_millions * 1.2)) +
+  geom_point(aes(size = world_box_office_millions))+
+  geom_label_repel(
+    data = text,
+    aes(label = text),
+    show.legend = F,
+    label.padding = 0.25,
+    size = 3,
+    max.time = 20,
+    max.iter = 1000000,
+    hjust = 0,
+    xlim = c(0,100),
+    ylim = c(0,100),
+    color = "black",
+    force = 1,
+    force_pull = 0.1,
+    min.segment.length = 0.1,
+    
+)+
+  scale_x_continuous(breaks = seq(10,100,by = 20), labels = seq(10,100,by=20), limits = c(0,100))+
+  scale_y_continuous(breaks = seq(10,100,by = 20), limits = c(0,100))+
+  labs(
+  y = "Rotten Tomatoes Score",
+  x = "Metacritic Rating",
+)+
+guides(
+  color = "none",
+  size = "none"
+
+)+
+theme_ft_rc()+
+# theme_minimal()+
+  theme(
+    plot.background = element_rect(fill = "#232730"),
+    panel.background = element_rect(fill = "#292e37"),
+    panel.grid = element_line(color = "#adadad"),
+    axis.title.x = element_text(size = 16)
+
+  )
+
+
+
+```
